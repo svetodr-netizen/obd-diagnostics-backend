@@ -87,3 +87,27 @@ async def start_stream(req: StreamRequest):
 async def stop_stream():
     await ws_manager.stop_live_stream()
     return {"success": True}
+
+@router.get("/vin/decode/{vin}")
+async def decode_vin(vin: str):
+    import httpx
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                f"https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/{vin}?format=json",
+                timeout=10
+            )
+            data = r.json()
+            results = {item["Variable"]: item["Value"] for item in data.get("Results", []) if item["Value"] and item["Value"] != "Not Applicable"}
+            return {
+                "vin": vin,
+                "make": results.get("Make", ""),
+                "model": results.get("Model", ""),
+                "year": results.get("Model Year", ""),
+                "engine": results.get("Displacement (L)", ""),
+                "fuel_type": results.get("Fuel Type - Primary", ""),
+                "body": results.get("Body Class", ""),
+                "raw": results
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
