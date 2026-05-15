@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.models.database import get_session, DiagnosticSession
-from app.services.pdf_service import generate_pdf_report
+from app.services.pdf_service import generate_pdf_report, generate_driving_report
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -78,4 +78,21 @@ async def export_pdf(session_id: int, db: AsyncSession = Depends(get_session)):
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=dijagnostika_{session_id}.pdf"}
+    )
+class SaveDrivingSessionRequest(BaseModel):
+    session_data: Dict
+    ai_analysis: Optional[str] = None
+    vehicle_info: Optional[Dict] = None
+
+@router.post("/driving/pdf")
+async def export_driving_pdf(req: SaveDrivingSessionRequest):
+    pdf_bytes = generate_driving_report(
+        session_data=req.session_data,
+        ai_analysis=req.ai_analysis or "",
+        vehicle_info=req.vehicle_info,
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=voznja.pdf"}
     )
